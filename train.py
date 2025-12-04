@@ -18,7 +18,7 @@ from datasets import load_from_disk, Dataset
 # --- 配置 ---
 # 建议先用 1.5B 快速跑通流程，确认无误再换 7B
 MODEL_NAME = "Qwen/Qwen2.5-1.5B-Instruct"  
-MAX_LENGTH = 1024
+MAX_LENGTH = 2048
 OUTPUT_DIR = "./qwen_kaggle_output"
 CACHE_DIR = "./qwen_data_cache"
 
@@ -121,7 +121,7 @@ def main():
     peft_config = LoraConfig(
         task_type=TaskType.SEQ_CLS,
         inference_mode=False,
-        r=8,
+        r=16,
         lora_alpha=32,
         lora_dropout=0.1,
         target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],    
@@ -140,23 +140,26 @@ def main():
             param.data = param.data.to(torch.float32)
     # =========== ✨ 核心修复代码结束 ✨ ===========
 
-    # --- Trainer ---
+        # 4. Trainer 参数微调
     training_args = TrainingArguments(
         output_dir=OUTPUT_DIR,
-        learning_rate=2e-4,
-        per_device_train_batch_size=2, # 显存够可调大
-        per_device_eval_batch_size=2,
-        gradient_accumulation_steps=4,
+        learning_rate=1e-4, # LoRA 学习率通常比全量微调大，但 2e-4 可能略大，1e-4 或 5e-5 比较稳
+        per_device_train_batch_size=2, 
+        gradient_accumulation_steps=8, # 累计步数增加，等效 Batch Size = 2*8 = 16，更稳定
         num_train_epochs=1,
         weight_decay=0.01,
         eval_strategy="steps",
-        eval_steps=50,
+        eval_steps=100,      # 步数不用太频繁，省时间
         save_strategy="steps",
-        save_steps=50,
-        logging_steps=10,
+        save_steps=100,
+        logging_steps=20,
         fp16=True,
         report_to="none",
-        label_names=["labels"]
+        label_names=["labels"],
+        warmup_ratio=0.03,   # 增加预热，防止刚开始梯度爆炸
+        metric_for_best_model="eval_loss", # 以 loss 为准
+        greater_is_better=False,           # loss 越小越好
+        load_best_model_at_end=True        # 训练结束加载最好的模型
     )
 
     trainer = Trainer(
