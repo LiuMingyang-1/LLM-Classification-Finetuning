@@ -144,7 +144,7 @@ def main():
     training_args = TrainingArguments(
         output_dir=OUTPUT_DIR,
         learning_rate=1e-4, # LoRA 学习率通常比全量微调大，但 2e-4 可能略大，1e-4 或 5e-5 比较稳
-        per_device_train_batch_size=2, 
+        per_device_train_batch_size=4, 
         gradient_accumulation_steps=8, # 累计步数增加，等效 Batch Size = 2*8 = 16，更稳定
         num_train_epochs=1,
         weight_decay=0.01,
