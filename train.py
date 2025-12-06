@@ -116,6 +116,7 @@ def main():
     
     # Qwen 完美兼容，不需要手动设置 config.pad_token_id，但为了保险：
     model.config.pad_token_id = tokenizer.pad_token_id
+    print(f"padding token: {tokenizer.pad_token} (ID: {tokenizer.pad_token_id})")
     
     # --- LoRA ---
     peft_config = LoraConfig(
